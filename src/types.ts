@@ -1,3 +1,4 @@
+
 export interface SurahMeta {
   number: number;
   name: string;
@@ -57,4 +58,21 @@ export interface SurahListResponse {
   data: SurahMeta[];
   status: string;
   code: number;
+}
+
+// -- Auth & User Types --
+
+export interface HistoryItem {
+  surahNumber: number;
+  surahName: string;
+  englishName: string;
+  lastReadAyah?: number; // Future proofing
+  timestamp: number;
+}
+
+export interface User {
+  email: string;
+  name: string;
+  password?: string; // In a real app, never store plain text!
+  history: HistoryItem[];
 }
