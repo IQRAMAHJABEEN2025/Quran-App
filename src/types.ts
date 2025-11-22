@@ -71,6 +71,7 @@ export interface HistoryItem {
 }
 
 export interface User {
+  uid: string;
   email: string;
   name: string;
   password?: string; // In a real app, never store plain text!

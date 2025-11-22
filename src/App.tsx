@@ -3,10 +3,10 @@ import { Header } from './components/Header';
 import { AyahCard } from './components/AyahCard';
 import { SurahCard } from './components/SurahCard';
 import { AuthForms } from './components/AuthForms';
-import { LandingPage } from './components/LandingPage'; // New Component
+import { LandingPage } from './components/LandingPage';
 import { Profile } from './components/Profile';
 import { fetchSurahList, fetchSurahData } from './services/quranService';
-import { getCurrentUser, addToHistory, logoutUser } from './services/authService';
+import { subscribeToAuthChanges, addToHistory, logoutUser } from './services/authService';
 import type { SurahMeta, MergedAyah, User } from './types';
 
 const App: React.FC = () => {
@@ -21,10 +21,9 @@ const App: React.FC = () => {
 
   // -- User State --
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isAuthChecked, setIsAuthChecked] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true); // Initial Auth Check
 
   // -- View State --
-  // Added 'landing' view as the default for guests
   const [view, setView] = useState<'landing' | 'home' | 'surah' | 'login' | 'signup' | 'profile'>('landing');
 
   // -- Data State --
@@ -47,18 +46,23 @@ const App: React.FC = () => {
   const showEnglish = translationMode === 'english' || translationMode === 'both';
   const showUrdu = translationMode === 'urdu' || translationMode === 'both';
 
-  // -- Initialize Auth --
+  // -- Initialize Auth (Firebase) --
   useEffect(() => {
-    const user = getCurrentUser();
-    setCurrentUser(user);
-    // If user exists, go to Home, otherwise go to Landing
-    if (user) {
-      setView('home');
-    } else {
-      setView('landing');
-    }
-    setIsAuthChecked(true);
-  }, []);
+    // This subscription handles session persistence automatically
+    // It is now optimized to return a basic user INSTANTLY, then update with history later
+    const unsubscribe = subscribeToAuthChanges((user) => {
+      setCurrentUser(user);
+      setAuthLoading(false);
+      
+      // If user is found and we are on landing/auth pages, redirect to Home
+      // This will now happen much faster
+      if (user && (view === 'landing' || view === 'login' || view === 'signup')) {
+        setView('home');
+      }
+    });
+
+    return () => unsubscribe();
+  }, [view]); // Dependency on view allows it to correct routing if stuck
 
   // -- Theme Effect --
   useEffect(() => {
@@ -96,22 +100,23 @@ const App: React.FC = () => {
 
   // -- Auth Handlers --
   
-  // Called when LOGIN is successful
-  const handleLoginSuccess = (user: User | null) => {
+  // Called when Signup is successful (Login success is handled by subscription)
+  const handleAuthSuccess = (user: User | null) => {
     if (user) {
-      // Actual Login
+      // If manual login returned user
       setCurrentUser(user);
       setView('home');
     } else {
-      // Signup Success -> Redirect to Landing Page (Home) so they can login later
-      setView('landing');
+      // Signup Success -> The subscription will pick up the new user automatically
+      // We just set loading/view state here to bridge the millisecond gap
+      setAuthLoading(true); 
     }
   };
 
-  const handleLogout = () => {
-    logoutUser();
+  const handleLogout = async () => {
+    await logoutUser();
     setCurrentUser(null);
-    setView('landing'); // Go back to landing page
+    setView('landing'); 
     setSurahs([]); 
     setSelectedSurah(null);
   };
@@ -128,10 +133,11 @@ const App: React.FC = () => {
     setAyahs([]); // Clear previous
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    // Add to history
+    // Add to history (async, no need to wait)
     if (currentUser) {
-      const updatedUser = addToHistory(surah);
-      if (updatedUser) setCurrentUser(updatedUser);
+      addToHistory(surah).then(updatedUser => {
+        if (updatedUser) setCurrentUser(updatedUser);
+      });
     }
 
     try {
@@ -170,7 +176,14 @@ const App: React.FC = () => {
     );
   }, [surahs, searchQuery]);
 
-  if (!isAuthChecked) return null; // Prevent flashing
+  // Prevent flashing while checking firebase auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-[#020617] flex items-center justify-center">
+        <div className="w-16 h-16 border-4 border-emerald-200 border-t-emerald-500 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   // -- RENDER: LANDING PAGE (Guest) --
   if (!currentUser && view === 'landing') {
@@ -186,14 +199,13 @@ const App: React.FC = () => {
   if (!currentUser && (view === 'login' || view === 'signup')) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-[#020617] text-slate-900 dark:text-slate-200 font-sans flex flex-col items-center justify-center relative overflow-hidden">
-        {/* Background Decoration */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-emerald-400/20 rounded-full blur-[100px] pointer-events-none" />
         
         <div className="z-10 w-full">
           <AuthForms 
             view={view} 
             onSwitchView={(v) => setView(v)} 
-            onSuccess={handleLoginSuccess}
+            onSuccess={handleAuthSuccess}
             onBack={handleBack}
           />
         </div>
@@ -202,6 +214,12 @@ const App: React.FC = () => {
   }
 
   // -- RENDER: MAIN APP (Authenticated User) --
+  // If currentUser is null here (but view isn't landing/auth), we fallback to landing
+  if (!currentUser) {
+     setView('landing');
+     return null;
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#020617] text-slate-900 dark:text-slate-200 transition-colors duration-500 relative font-sans selection:bg-emerald-200 dark:selection:bg-emerald-900 flex flex-col">
       
