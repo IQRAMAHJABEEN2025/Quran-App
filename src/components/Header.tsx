@@ -6,7 +6,7 @@ interface HeaderProps {
   currentSurah: SurahMeta | null;
   onBack: () => void;
   onProfileClick: () => void;
-  onLoginClick: () => void;
+  // onLoginClick removed
   currentUser: User | null;
   searchQuery: string;
   onSearchChange: (query: string) => void;
@@ -25,7 +25,7 @@ export const Header: React.FC<HeaderProps> = ({
   currentSurah,
   onBack,
   onProfileClick,
-  onLoginClick,
+  // onLoginClick removed
   currentUser,
   searchQuery,
   onSearchChange,

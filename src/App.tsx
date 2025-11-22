@@ -228,7 +228,6 @@ const App: React.FC = () => {
         currentSurah={selectedSurah}
         onBack={handleBack}
         onProfileClick={() => setView('profile')}
-        onLoginClick={() => setView('login')}
         currentUser={currentUser}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
