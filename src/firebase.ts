@@ -2,14 +2,26 @@ import firebase from "firebase/compat/app";
 import "firebase/compat/auth";
 import "firebase/compat/database";
 
+// Fix for TypeScript error: Property 'env' does not exist on type 'ImportMeta'
+declare global {
+  interface ImportMeta {
+    readonly env: ImportMetaEnv;
+  }
+}
+
+// SECURITY UPDATE:
+// Configuration is now loaded from Environment Variables.
+// Create a .env file in your project root and add these values there.
+// Do not commit .env file to GitHub.
+
 const firebaseConfig = {
-  apiKey: "AIzaSyBQaZ08MQRiyG3_lgmiqEixuub9VRj-2xg",
-  authDomain: "quran-app-2a748.firebaseapp.com",
-  projectId: "quran-app-2a748",
-  storageBucket: "quran-app-2a748.firebasestorage.app",
-  messagingSenderId: "720540224444",
-  appId: "1:720540224444:web:e9ec095d35165b2acbf9b9",
-  measurementId: "G-PNB4SF1FHS"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 // Initialize Firebase
@@ -19,7 +31,7 @@ const app = !firebase.apps.length ? firebase.initializeApp(firebaseConfig) : fir
 // Exports
 export const auth = app.auth();
 export const googleProvider = new firebase.auth.GoogleAuthProvider();
-// Initialize Realtime Database instead of Firestore
+// Initialize Realtime Database
 export const database = app.database();
 
 export default firebase;
